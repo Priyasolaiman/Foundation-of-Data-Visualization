@@ -12,7 +12,10 @@ description: "HeatMap or HeatMess"
 
 ### Good and Bad Plotting
 
-For this assignment I used my dataset that contains differentially expressed genes between ovaries and testis of a syngnathid fish.
+For this assignment and for effectiveness and expressiveness part, I'm using my dataset that contains differentially expressed genes between ovaries and testis of a syngnathid fish.
+I have attached all the datasets used for this assignment in my marks and Channel folder.
+
+First load the packages and libraries.
 
 ```{r, message=FALSE, warning=FALSE}
 # Load necessary Libraries
@@ -25,6 +28,7 @@ library(gplots)
 library(RColorBrewer)
 ```
 
+
 ```{r, message=FALSE, warning=FALSE}
 # Datasets ( Ovaries and Testis)
 S_ovaries <- read.csv("C:/Users/farli/OneDrive/Documents/sygnathus scovelli.rnaseq data/Final_count_of_all_tissue_syngnathus_scovelli/final_count_ss_ovaries.csv", header = TRUE, row.names = 1, sep = ",")
@@ -33,7 +37,7 @@ S_testes_oldref <-read.csv("C:/Users/farli/OneDrive/Documents/sygnathus scovelli
 
 ```
 
-Conduct the Differential Gene Expression Analysis before visualization.
+Conduct the Differential Gene Expression Analysis before visualization or plotting.
 
 ```{r}
 #| message: false
@@ -82,7 +86,7 @@ res_SFO_vs_SNPT <- results(dds_SFO_vs_SNPT)
 res_SFO_vs_SPT <- results(dds_SFO_vs_SPT)
 
 #mcols is basically shows metadata column names
-mcols(res_all, use.names = TRUE)
+#mcols(res_all, use.names = TRUE)
 
 sum(res_SFO_vs_SNPT$padj < 0.05, na.rm = TRUE)
 sum(res_SFO_vs_SNPT$padj < 0.05, na.rm = TRUE)
@@ -99,24 +103,24 @@ sigs_all <- sigs_all[sigs_all$padj < 0.05,]
 
 ## Expressiveness and Effectiveness
 
-##Figure1 In my first figure I use colour hues to express effectively the result. Below you can see 3 differnt colours represnt clustering of 3 different samples. SFO = Syngnathus Female Ovaries SNPT = Syngnathus Non Pregnant Testis SPT = Syngnathus Pregnant Testis. This colours cleary expressing how different ovaries and Testis.
+## Figure1 
+In my first figure I use colour hues to express effectively the result. Below you can see 3 differnt colours represent clustering of 3 different samples. SFO = Syngnathus Female Ovaries SNPT = Syngnathus Non Pregnant Testis SPT = Syngnathus Pregnant Testis. This colours cleary expressing how different ovaries and Testis.
 
 ```{r}
-
 #| message: false
 #| warning: false
-#rlog transform for application not for differntial testing
+#rlog transform for application not for differential testing
 rld <- rlog(dds_ALL)
+```
 
+```{r}
 #PCAplot, plotPCA which comes with DESeq2.
 # Run PCA and store the ggplot object
 pca_plot <- plotPCA(rld, intgroup = "All_condition")
 
 # Customize colors using ggplot2
-pca_plot + scale_color_manual(values = c("#550000", "#AA0000", "#FF0000", 
-                                         "#005500", "#00AA00", "#00FF00", 
-                                         "#000055", "#0000AA", "#0000FF", 
-                                         "#550055", "#AA00AA", "#FF00FF"))+
+pca_plot + scale_color_manual(values = c("red2","blue", 
+                                          "magenta2"))+
   labs(title = "PCA Plot of S_ovaries and S_Testis", 
        x = "PC1:84% Variance", 
        y = "PC2:4% Variance", 
@@ -124,23 +128,30 @@ pca_plot + scale_color_manual(values = c("#550000", "#AA0000", "#FF0000",
   theme_minimal()
 ```
 
-##Figure 2 In figure 2 PCA plot of differential gene expression data with extreme violations of the expressiveness and effectiveness principles
+##Figure 2 
+In figure 2 we can see the violations of the principle of expressiveness and effectivemness. As, now we can't differentiate which one what and thus can't say if it's clustering or not. 
+I used points as the marks which all identical and that's why meaningless.And the channel is colour which I used same blue colour for every sample making it hard to distinguish the cluster.
 
 ```{r}
 #| message: false
 #| warning: false
-pca_data <- plotPCA(rld, intgroup = "All_condition", returnData = TRUE)
 
-ggplot(pca_data, aes(x = factor(name), y = factor(All_condition), fill = All_condition)) +
-  geom_tile() +
-  labs(title = "Heatmap of PCA Data (Incorrect Use)",
-       x = "Sample Names", 
-       y = "Condition Group") +
-  theme_minimal()
-
+pca_plot + 
+  scale_color_manual(values = c("blue", "blue", "blue"))+
+  labs(title = "PCA Plot",
+       x = "PC2: 99% Variance",  # Incorrect variance
+       y = "PC1: 1% Variance",   # Swapped values to mislead
+       color = "Totally Random Groups") +  # Meaningless legend
+  theme(
+    panel.background = element_rect(fill = "grey"),  # Extreme background color
+    plot.title = element_text(size = 40, color = "red", face = "bold"),  # Overpowering title
+    axis.text = element_text(size = 10, color = "white"),
+    legend.position = "none")
 ```
 
-#Discriminability/Figure 3
+### Discriminability
+# Figure 3
+For the second part I tried to see the overall distribution of genes in ovaries and testis. I use bars as the marks and and length/height as channel
 
 ```{r}
 #| message: false
@@ -180,7 +191,8 @@ ggplot(S_ov_hist, aes(x = c3)) +
   theme_gray()
 ```
 
-# Figure 4/Bad plots
+# Figure 4
+In the figure 4 it violated the discriminability, Beacuse you can't properly measure the frequency of genes and overall distribution.
 
 ```{r}
 #| message: false
@@ -204,7 +216,7 @@ x_breaks <- c(10, 1000, 100000, 1e07)  # Adjust log-scale
 
 # Example for first dataset
 ggplot(S_tst_hist, aes(x = c1)) + 
-  geom_histogram(fill = "blue4", color = "black", bins = 1000) +
+  geom_histogram(fill= "blue4",color = "black",bins = 1000)+
   scale_x_log10(limits = x_limits, breaks = x_breaks) + 
   scale_y_continuous(limits = y_limits, breaks = y_breaks) + 
   labs(title = "Distribution of Overall Gene Counts Across S.scoveli Testis", 
@@ -220,7 +232,9 @@ ggplot(S_ov_hist, aes(x = c3)) +
   theme_gray()
 ```
 
-#Separability/ Figure 5
+#Separability
+#Figure 5
+In the separability part, I choose rectangular cells as marks and colour gradient as channels. In the figure is showing clearly some genes are really off in ovaries while those genes are on in testis making it clear that this dimporphic tissues have so many genes that expressed differntially.
 
 ```{r}
 #| message: false
@@ -237,8 +251,23 @@ heatmap.2(assay(rld)[topVarGenes, ],
 ```
 
 # Figure 6/Heat Mess
+# Create a bad heatmap by applying poor design choices
+
+```{r}
+topVarGenes <- head( order( rowVars( assay(rld) ), decreasing=TRUE ), 35 )
+heatmap.2(assay(rld)[topVarGenes, ], 
+          scale = "row", trace = "none", 
+          dendrogram = "column", 
+          col = colorRampPalette(rev(brewer.pal(9, "Bu")))(255),
+          cexRow = 0.6,  # Adjust row label size
+          cexCol = 0.7,
+          main = "S_Ov vs S_T")  # Adjust column label size)
+
+```
 
 #PopOut/ Figure 7
+For popout i used points as marks and colour as channel.
+
 
 ```{r}
 #| message: false
@@ -262,3 +291,21 @@ plotMA(res_SFL_vs_SPL, ylim = c(-5,5), main = "Female vs Pregnant Male Liver")
 plotMA(res_SFO_vs_SPT, ylim = c(-5,5), main = "S_Ovaries vs Pregnant S_Testis")
 
 ```
+
+#Popout/ Figure 8
+In this figure I tried to violate the principles of Popout, making it hard to ditinguish what we are looking for. I tried to remove the blue popout colour but it's not working. However now I expand the y-axis too much which shrinks the genes in a way that we can't say which genes are differntially expressed and which are not. 
+Figure 8 sucks because all marks are clumped together, and 
+made the plot meaningless to explain.
+
+```{r}
+# Remove axis labels, use non-informative colors, set extreme point sizes, and distort y-axis
+plotMA(res_SFL_vs_SNPL, 
+       ylim = c(-5000000, 5000000),  # Overly exaggerated y-axis
+       main = "",
+       cex = 2)  # Extremely large points that overlap
+```
+
+
+
+
+
