@@ -1,0 +1,264 @@
+---
+title: "Assignment 4"
+subtitle: "Marks and Channel"
+author: "Morjina Solaiman"
+date: "2025-02-20"
+categories: "Assignment, Data Visualization"
+format: html
+code-fold: true
+code-tools: true
+description: "HeatMap or HeatMess"
+---
+
+### Good and Bad Plotting
+
+For this assignment I used my dataset that contains differentially expressed genes between ovaries and testis of a syngnathid fish.
+
+```{r, message=FALSE, warning=FALSE}
+# Load necessary Libraries
+library(DESeq2)
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(EnhancedVolcano)
+library(gplots)
+library(RColorBrewer)
+```
+
+```{r, message=FALSE, warning=FALSE}
+# Datasets ( Ovaries and Testis)
+S_ovaries <- read.csv("C:/Users/farli/OneDrive/Documents/sygnathus scovelli.rnaseq data/Final_count_of_all_tissue_syngnathus_scovelli/final_count_ss_ovaries.csv", header = TRUE, row.names = 1, sep = ",")
+
+S_testes_oldref <-read.csv("C:/Users/farli/OneDrive/Documents/sygnathus scovelli.rnaseq data/Final_count_of_all_tissue_syngnathus_scovelli/final_count_ss_testes_oldrefgen.csv", header = TRUE, row.names = 1, sep =",") 
+
+```
+
+Conduct the Differential Gene Expression Analysis before visualization.
+
+```{r}
+#| message: false
+#| warning: false
+#Combine all the file together but different rows means different gene number
+S_OT <- cbind(S_ovaries, S_testes_oldref)
+
+#Subset the Counts data for each of the different conditions 
+All <- S_OT[, c(1:12)]
+SFO_vs_SPT_count_table <- S_OT[, c(1:5, 8:12)]
+SFO_vs_SNPT_count_table <- S_OT[, c(1:5, 6:7)]
+
+##test
+#Create the conditions for each of them 
+All_condition <- c(rep("SFO",5), rep("SNPT",2), rep("SPT",5))
+SFO_vs_SNPT_condition <- c(rep("SFO", 5), rep("SNPT", 2))
+SFO_vs_SPT_condition <-  c(rep("SFO", 5), rep("SPT", 5))
+###########################
+
+#test
+coldata_ALL <- data.frame(row.names = colnames(All), All_condition)
+coldata_SFO_vs_SNPT <- data.frame(row.names = colnames(SFO_vs_SNPT_count_table), SFO_vs_SNPT_condition)
+coldata_SFO_vs_SPT <- data.frame(row.names = colnames(SFO_vs_SPT_count_table), SFO_vs_SPT_condition)
+############################
+
+dds_ALL <- DESeqDataSetFromMatrix(countData = All, 
+                                  colData = coldata_ALL, 
+                                  design = ~All_condition)
+
+dds_SFO_vs_SNPT <-  DESeqDataSetFromMatrix(countData = SFO_vs_SNPT_count_table,colData = coldata_SFO_vs_SNPT,
+                                           design = ~SFO_vs_SNPT_condition)
+dds_SFO_vs_SPT <-  DESeqDataSetFromMatrix(countData = SFO_vs_SPT_count_table,
+                                          colData = coldata_SFO_vs_SPT,
+                                          design = ~SFO_vs_SPT_condition)
+
+################################
+dds_ALL <- DESeq(dds_ALL)
+dds_SFO_vs_SNPT <- DESeq(dds_SFO_vs_SNPT)
+dds_SFO_vs_SPT <- DESeq(dds_SFO_vs_SPT)
+
+###########################
+# Calling results without any arguments will extract the 
+# estimated log2 fold changes and p values for the last variable in the design formula
+res_all <- results(dds_ALL)
+res_SFO_vs_SNPT <- results(dds_SFO_vs_SNPT)
+res_SFO_vs_SPT <- results(dds_SFO_vs_SPT)
+
+#mcols is basically shows metadata column names
+mcols(res_all, use.names = TRUE)
+
+sum(res_SFO_vs_SNPT$padj < 0.05, na.rm = TRUE)
+sum(res_SFO_vs_SNPT$padj < 0.05, na.rm = TRUE)
+###########################
+#removing na values
+sigs_all <- na.omit(res_all)
+sigs_SFO_vs_SNPT <- na.omit(res_SFO_vs_SNPT)
+sigs_SFO_vs_SPT <- na.omit(res_SFO_vs_SPT)
+
+sigs_SFO_vs_SNPT <- sigs_SFO_vs_SNPT[sigs_SFO_vs_SNPT$padj < 0.05,]
+sigs_SFO_vs_SPT <- sigs_SFO_vs_SPT[sigs_SFO_vs_SPT$padj < 0.05,]
+sigs_all <- sigs_all[sigs_all$padj < 0.05,]
+```
+
+## Expressiveness and Effectiveness
+
+##Figure1 In my first figure I use colour hues to express effectively the result. Below you can see 3 differnt colours represnt clustering of 3 different samples. SFO = Syngnathus Female Ovaries SNPT = Syngnathus Non Pregnant Testis SPT = Syngnathus Pregnant Testis. This colours cleary expressing how different ovaries and Testis.
+
+```{r}
+
+#| message: false
+#| warning: false
+#rlog transform for application not for differntial testing
+rld <- rlog(dds_ALL)
+
+#PCAplot, plotPCA which comes with DESeq2.
+# Run PCA and store the ggplot object
+pca_plot <- plotPCA(rld, intgroup = "All_condition")
+
+# Customize colors using ggplot2
+pca_plot + scale_color_manual(values = c("#550000", "#AA0000", "#FF0000", 
+                                         "#005500", "#00AA00", "#00FF00", 
+                                         "#000055", "#0000AA", "#0000FF", 
+                                         "#550055", "#AA00AA", "#FF00FF"))+
+  labs(title = "PCA Plot of S_ovaries and S_Testis", 
+       x = "PC1:84% Variance", 
+       y = "PC2:4% Variance", 
+       color = "Sample Groups") +  # Add legend title
+  theme_minimal()
+```
+
+##Figure 2 In figure 2 PCA plot of differential gene expression data with extreme violations of the expressiveness and effectiveness principles
+
+```{r}
+#| message: false
+#| warning: false
+pca_data <- plotPCA(rld, intgroup = "All_condition", returnData = TRUE)
+
+ggplot(pca_data, aes(x = factor(name), y = factor(All_condition), fill = All_condition)) +
+  geom_tile() +
+  labs(title = "Heatmap of PCA Data (Incorrect Use)",
+       x = "Sample Names", 
+       y = "Condition Group") +
+  theme_minimal()
+
+```
+
+#Discriminability/Figure 3
+
+```{r}
+#| message: false
+#| warning: false
+S_ovaries <- read.csv("C:/Users/farli/OneDrive/Documents/sygnathus scovelli.rnaseq data/Final_count_of_all_tissue_syngnathus_scovelli/final_count_ss_ovaries.csv", header = TRUE, row.names = 1, sep = ",")
+S_testes_oldref <- read.csv("C:/Users/farli/OneDrive/Documents/sygnathus scovelli.rnaseq data/Final_count_of_all_tissue_syngnathus_scovelli/final_count_ss_testes_oldrefgen.csv", header = TRUE, row.names = 1, sep =",")
+
+#Histogram to check overall gene distribution
+#making a dataframe of sum of all row count
+S_tst_hist <- data.frame(rowSums(S_testes_oldref)) 
+S_ov_hist <- data.frame(rowSums(S_ovaries))
+
+#changing the column names
+names(S_tst_hist)[1] <- "c1"
+names(S_ov_hist)[1] <- "c3"
+
+x_limits <- c(1, 1e07)  # Adjust based on your data range
+y_limits <- c(0, 1000)   # Adjust to match both plots
+y_breaks <- seq(0, 1000, by = 250)  # Ensure consistent y-axis breaks
+x_breaks <- c(10, 1000, 100000, 1e07)  # Adjust log-scale
+
+# Example for first dataset
+ggplot(S_tst_hist, aes(x = c1)) + 
+  geom_histogram(fill = "blue4", color = "black", bins = 100) +
+  scale_x_log10(limits = x_limits, breaks = x_breaks) + 
+  scale_y_continuous(limits = y_limits, breaks = y_breaks) + 
+  labs(title = "Distribution of Overall Gene Counts Across S.scoveli Testis", 
+       x = "Log(total counts)", y = "Frequency") +
+  theme_gray()
+
+ggplot(S_ov_hist, aes(x = c3)) + 
+  geom_histogram(fill = "blue4", color = "black", bins = 100) +
+  scale_x_log10(limits = x_limits, breaks = x_breaks) + 
+  scale_y_continuous(limits = y_limits, breaks = y_breaks) + 
+  labs(title = "Distribution of Overall Gene Counts Across S.scoveli Ovaries", 
+       x = "Log(total counts)", y = "Frequency") +
+  theme_gray()
+```
+
+# Figure 4/Bad plots
+
+```{r}
+#| message: false
+#| warning: false
+S_ovaries <- read.csv("C:/Users/farli/OneDrive/Documents/sygnathus scovelli.rnaseq data/Final_count_of_all_tissue_syngnathus_scovelli/final_count_ss_ovaries.csv", header = TRUE, row.names = 1, sep = ",")
+S_testes_oldref <- read.csv("C:/Users/farli/OneDrive/Documents/sygnathus scovelli.rnaseq data/Final_count_of_all_tissue_syngnathus_scovelli/final_count_ss_testes_oldrefgen.csv", header = TRUE, row.names = 1, sep =",")
+
+#Histogram to check overall gene distribution
+#making a dataframe of sum of all row count
+S_tst_hist <- data.frame(rowSums(S_testes_oldref)) 
+S_ov_hist <- data.frame(rowSums(S_ovaries))
+
+#changing the column names
+names(S_tst_hist)[1] <- "c1"
+names(S_ov_hist)[1] <- "c3"
+
+x_limits <- c(1, 1e07)  # Adjust based on your data range
+y_limits <- c(0, 1000)   # Adjust to match both plots
+y_breaks <- seq(0, 1000, by = 250)  # Ensure consistent y-axis breaks
+x_breaks <- c(10, 1000, 100000, 1e07)  # Adjust log-scale
+
+# Example for first dataset
+ggplot(S_tst_hist, aes(x = c1)) + 
+  geom_histogram(fill = "blue4", color = "black", bins = 1000) +
+  scale_x_log10(limits = x_limits, breaks = x_breaks) + 
+  scale_y_continuous(limits = y_limits, breaks = y_breaks) + 
+  labs(title = "Distribution of Overall Gene Counts Across S.scoveli Testis", 
+       x = "Log(total counts)", y = "Frequency") +
+  theme_gray()
+
+ggplot(S_ov_hist, aes(x = c3)) + 
+  geom_histogram(fill = "blue4", color = "black", bins = 1000) +
+  scale_x_log10(limits = x_limits, breaks = x_breaks) + 
+  scale_y_continuous(limits = y_limits, breaks = y_breaks) + 
+  labs(title = "Distribution of Overall Gene Counts Across S.scoveli Ovaries", 
+       x = "Log(total counts)", y = "Frequency") +
+  theme_gray()
+```
+
+#Separability/ Figure 5
+
+```{r}
+#| message: false
+#| warning: false
+rld <- rlog(dds_ALL)
+topVarGenes <- head( order( rowVars( assay(rld) ), decreasing=TRUE ), 35 )
+heatmap.2(assay(rld)[topVarGenes, ], 
+          scale = "row", trace = "none", 
+          dendrogram = "column", 
+          col = colorRampPalette(rev(brewer.pal(9, "RdBu")))(255),
+          cexRow = 0.6,  # Adjust row label size
+          cexCol = 0.7,
+          main = "S_Ov vs S_T")  # Adjust column label size)
+```
+
+# Figure 6/Heat Mess
+
+#PopOut/ Figure 7
+
+```{r}
+#| message: false
+#| warning: false
+library(DESeq2)
+#plotting
+#MA plot, x axis = mean expression & y axix = log2fold, c(-5,5) means log2fold value -5 to +5
+res_SFL_vs_SNPL <- read.csv("res_SFL_vs_SNPL.csv")
+res_SFO_vs_SNPT <- read.csv("res_SFO_vs_SNPT.csv")
+res_SFL_vs_SPL <- read.csv("res_SFL_vs_SPL.csv")
+res_SFO_vs_SPT <- read.csv("res_SFO_vs_SPT.csv")
+res_SFL_vs_SNPL <- results(dds_SFL_vs_SNPL)
+res_SFL_vs_SPL <- results(dds_SFL_vs_SPL)
+res_SFO_vs_SNPT <- results(dds_SFO_vs_SNPT)
+res_SFO_vs_SPT <- results(dds_SFO_vs_SPT)
+
+plotMA(res_SFL_vs_SNPL, ylim = c(-5,5), main = "Female vs Non Pregnant Male Liver")
+plotMA(res_SFO_vs_SNPT, ylim = c(-5,5), main = "S_Ovaries vs Non Pregnant S_Testis")
+
+plotMA(res_SFL_vs_SPL, ylim = c(-5,5), main = "Female vs Pregnant Male Liver")
+plotMA(res_SFO_vs_SPT, ylim = c(-5,5), main = "S_Ovaries vs Pregnant S_Testis")
+
+```
