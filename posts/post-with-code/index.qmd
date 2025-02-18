@@ -1,0 +1,6 @@
+---
+title: "Assignment 3"
+author: "Morjina Solaiman"
+date: "2025-01-30"
+categories: [news, code, analysis]
+---
