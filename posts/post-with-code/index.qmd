@@ -1,6 +1,119 @@
 ---
-title: "Assignment 3"
+title: "Good and Bad Plotting"
 author: "Morjina Solaiman"
-date: "2025-01-30"
-categories: [news, code, analysis]
+date: "2025-02-18"
+categories: [Code, analysis]
 ---
+
+### Differential Gene Expression Analysis
+
+This is a analysis of the gene expression level between gonads or sexually dimorphic tissues of Syngnathus scovelli. S. scovelli is a fish belongs to Syngnathidae fish family which shows male pregnancy and males develop a brood pouch.
+
+### Load the libraries
+
+```{r}
+#| message: false
+#| warning: false
+# Load necessary Libraries
+library(DESeq2)
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(EnhancedVolcano)
+library(gplots)
+
+```
+
+```{r}
+#| message: false
+#| warning: true
+S_ovaries <- read.csv("C:/Users/farli/OneDrive/Documents/sygnathus scovelli.rnaseq data/Final_count_of_all_tissue_syngnathus_scovelli/final_count_ss_ovaries.csv", header = TRUE, row.names = 1, sep = ",")
+
+S_testes_oldref <-read.csv("C:/Users/farli/OneDrive/Documents/sygnathus scovelli.rnaseq data/Final_count_of_all_tissue_syngnathus_scovelli/final_count_ss_testes_oldrefgen.csv", header = TRUE, row.names = 1, sep =",") 
+
+```
+
+```{r}
+#| message: false
+#| warning: false
+#Combine all the file together but different rows means different gene number
+S_OT <- cbind(S_ovaries, S_testes_oldref)
+
+#Subset the Counts data for each of the different conditions 
+All <- S_OT[, c(1:12)]
+SFO_vs_SPT_count_table <- S_OT[, c(1:5, 8:12)]
+SFO_vs_SNPT_count_table <- S_OT[, c(1:5, 6:7)]
+
+##test
+#Create the conditions for each of them 
+All_condition <- c(rep("SFO",5), rep("SNPT",2), rep("SPT",5))
+SFO_vs_SNPT_condition <- c(rep("SFO", 5), rep("SNPT", 2))
+SFO_vs_SPT_condition <-  c(rep("SFO", 5), rep("SPT", 5))
+###########################
+
+#test
+coldata_ALL <- data.frame(row.names = colnames(All), All_condition)
+coldata_SFO_vs_SNPT <- data.frame(row.names = colnames(SFO_vs_SNPT_count_table), SFO_vs_SNPT_condition)
+coldata_SFO_vs_SPT <- data.frame(row.names = colnames(SFO_vs_SPT_count_table), SFO_vs_SPT_condition)
+############################
+
+dds_ALL <- DESeqDataSetFromMatrix(countData = All, 
+                                  colData = coldata_ALL, 
+                                  design = ~All_condition)
+
+dds_SFO_vs_SNPT <-  DESeqDataSetFromMatrix(countData = SFO_vs_SNPT_count_table,colData = coldata_SFO_vs_SNPT,
+                                           design = ~SFO_vs_SNPT_condition)
+dds_SFO_vs_SPT <-  DESeqDataSetFromMatrix(countData = SFO_vs_SPT_count_table,
+                                          colData = coldata_SFO_vs_SPT,
+                                          design = ~SFO_vs_SPT_condition)
+
+################################
+dds_ALL <- DESeq(dds_ALL)
+dds_SFO_vs_SNPT <- DESeq(dds_SFO_vs_SNPT)
+dds_SFO_vs_SPT <- DESeq(dds_SFO_vs_SPT)
+
+###########################
+# Calling results without any arguments will extract the 
+# estimated log2 fold changes and p values for the last variable in the design formula
+res_all <- results(dds_ALL)
+res_SFO_vs_SNPT <- results(dds_SFO_vs_SNPT)
+res_SFO_vs_SPT <- results(dds_SFO_vs_SPT)
+
+#mcols is basically shows metadata column names
+mcols(res_all, use.names = TRUE)
+
+sum(res_SFO_vs_SNPT$padj < 0.05, na.rm = TRUE)
+sum(res_SFO_vs_SNPT$padj < 0.05, na.rm = TRUE)
+###########################
+#removing na values
+sigs_all <- na.omit(res_all)
+sigs_SFO_vs_SNPT <- na.omit(res_SFO_vs_SNPT)
+sigs_SFO_vs_SPT <- na.omit(res_SFO_vs_SPT)
+
+sigs_SFO_vs_SNPT <- sigs_SFO_vs_SNPT[sigs_SFO_vs_SNPT$padj < 0.05,]
+sigs_SFO_vs_SPT <- sigs_SFO_vs_SPT[sigs_SFO_vs_SPT$padj < 0.05,]
+sigs_all <- sigs_all[sigs_all$padj < 0.05,]
+```
+
+### Visualization
+
+```{r}
+#| message: false
+#| warning: false
+#rlog transform for application not for differntial testing
+rld <- rlog(dds_ALL)
+
+#Heatmap with gene clustering
+topVarGenes <- head( order( rowVars( assay(rld) ), decreasing=TRUE ), 35 )
+heatmap.2(assay(rld)[topVarGenes, ], 
+          scale = "row", trace = "none", 
+          dendrogram = "column", 
+          col = colorRampPalette(rev(brewer.pal(9, "RdBu")))(255),
+          cexRow = 0.6,  # Adjust row label size
+          cexCol = 0.7,
+          main = "S_Ov vs S_T")  # Adjust column label size)
+
+
+```
+
+
